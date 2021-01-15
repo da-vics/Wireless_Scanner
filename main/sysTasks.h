@@ -12,6 +12,12 @@
 
 #include "clientServer.h"
 
+#define Log "DEBUG"
+
+Configurations dataConfigs;
+
+// static SemaphoreHandle_t GetID;
+
 uint8_t BarData[200];
 uint8_t ConfigData[200];
 
@@ -31,6 +37,26 @@ void sendData(const char *data,uart_port_t port_num){
 	
 	const int len = strlen(data);
 	uart_write_bytes(port_num, data, len);
+}
+
+void SetConfigurations(Configurations *);
+void GetNvsData(Configurations *);
+
+void getDeviceId()
+{	
+	if(strlen(deviceID)<=1){
+
+		if(wifiConnectionStatus){
+			post_content(ACQUIRE_ID, acquire_word);
+			sprintf(dataConfigs.DeviceID, "%s", deviceID);
+			printf("%s\n",dataConfigs.DeviceID);
+			SetConfigurations(&dataConfigs);
+		}
+		else
+			ESP_LOGD(Log, "wifi not connected");
+	}
+	else
+		ESP_LOGD(Log, "DeviceId available");
 }
 
 //Wifi event Handler
@@ -125,11 +151,8 @@ static void BarCodeRx_Task(void *args){
 
 	while (1){
 
-		if(wifiConnectionStatus)
-		post_content(ACQUIRE_ID, acquire_word);
-
-		else
-			ESP_LOGE("Error", "not connected to wifi");
+		if(!GottenId)
+		getDeviceId();
 
 		int rx = uart_read_bytes(UART_NUM_1, BarData, RX_BUF_SIZE * 2, 1000 / portTICK_RATE_MS);
 		if (rx > 0){
@@ -139,12 +162,8 @@ static void BarCodeRx_Task(void *args){
 			memset(BarData, 0, sizeof(BarData));
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-        // sendData("victor\n");
     }
 }
-
-void SetConfigurations(Configurations *);
-void GetNvsData(Configurations *);
 
 //ConfigData RX Task
 static void ConfigDataRx_Task(void *args){
@@ -237,9 +256,17 @@ void initialProcess(Configurations *const configs)
 		memcpy((void *)&ACQUIRE_ID, (void *)configs->Url, sizeof(configs->Url));
 	}
 
-	printf("%s\n", CONFIG_WIFI_PASSSWORD);
-	printf("%s\n", CONFIG_WIFI_SSID);
-	printf("%s\n", ACQUIRE_ID);
+	if(strlen(configs->DeviceID)>1)
+	{
+		memset(deviceID, 0, sizeof(deviceID));
+		memcpy((void *)&deviceID, (void *)configs->DeviceID, sizeof(configs->DeviceID));
+	}
+
+	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_PASSSWORD);
+	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_SSID);
+	ESP_LOGI(Log,"%s\n", ACQUIRE_ID);
+	ESP_LOGI(Log,"%s\n", deviceID);
+	
 }
 
 #endif //SYS_TASK_H
