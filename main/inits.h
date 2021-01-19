@@ -17,10 +17,12 @@ typedef enum
 
 typedef struct
 {
-	char Url[150];
+	char Url_Upload[150];
+	char Url_Key[150];
 	char WifiSSID[32];
 	char WifiPassword[60];
 	char DeviceID[70];
+	char AcessKey[50];
 } Configurations;
 
 static const int RX_BUF_SIZE = 1024;
@@ -92,13 +94,15 @@ void init_nvs(){
 //reset struct data
 void resetConfigurationDat(Configurations *config){
 
-	memset(config->Url, 0, sizeof(config->Url));
+	memset(config->Url_Upload, 0, sizeof(config->Url_Upload));
+	memset(config->Url_Key, 0, sizeof(config->Url_Key));
 	memset(config->WifiSSID, 0, sizeof(config->WifiSSID));
 	memset(config->WifiPassword, 0, sizeof(config->WifiPassword));
 	memset(config->DeviceID, 0, sizeof(config->DeviceID));
+	memset(config->AcessKey, 0, sizeof(config->AcessKey));
 }
 
-//process ConfigurationData
+//process ConfigurationData  KEY:<string NAME:Value> URL_KEY:<url> URL_UPLOAD:<url>  <wifi_username:wifi_password>
 Operations process_ConfigData(char *data, Configurations *config){
 
 	int start = -1, end = -1;
@@ -106,7 +110,7 @@ Operations process_ConfigData(char *data, Configurations *config){
 	if(data[0] == '<')
 		start = 0;
 	
-	else if(strstr(data,"URL:"))
+	else if(strstr(data,"URL_KEY:"))
 	{
 		data = strstr(data, ":");
 		int pos = 0;
@@ -114,9 +118,69 @@ Operations process_ConfigData(char *data, Configurations *config){
 		{	
 			if(data[i] == '>')
 				break;
-			config->Url[pos++] = data[i];
-			config->Url[pos] = NULL;
+			config->Url_Key[pos++] = data[i];
+			config->Url_Key[pos] = NULL;
 		}
+		return Normal;
+	}
+
+	else if(strstr(data,"URL_UPLOAD:"))
+	{
+		data = strstr(data, ":");
+		int pos = 0;
+		for (int i = 2; i < strlen(data);++i)
+		{	
+			if(data[i] == '>')
+				break;
+			config->Url_Upload[pos++] = data[i];
+			config->Url_Upload[pos] = NULL;
+		}
+		return Normal;
+	}
+
+	else if(strstr(data,"KEY:"))
+	{
+		char key[50];
+		data = strstr(data, ":");
+		int pos = 0;
+		for (int i = 2; i < strlen(data);++i)
+		{	
+			if(data[i] == '>')
+				break;
+			key[pos++] = data[i];
+			key[pos] = NULL;
+		}
+
+	char temp1[15];
+	char temp2[35];
+
+	pos = 0;
+	bool next = false;
+
+	for (int i = 0; i < strlen(key); ++i){ 
+
+		if(key[i] == ':'){
+			next = true;
+			pos = 0;
+			continue;
+		}
+
+		if(!next){
+			temp1[pos++] = key[i];
+			temp1[pos] = '\0';
+		}
+
+		if(next){
+			temp2[pos++] = key[i];
+			temp2[pos] = '\0';
+		}
+	}
+
+	cJSON *dat;
+	dat = cJSON_CreateObject();
+	cJSON_AddStringToObject(dat, temp1, temp2);
+	sprintf(config->AcessKey,"%s",cJSON_Print(dat));
+
 		return Normal;
 	}
 

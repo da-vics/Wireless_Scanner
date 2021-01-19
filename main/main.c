@@ -11,6 +11,6 @@ void app_main(void)
   wifi_init_sta();
   createDataJsonObject();
 
-  xTaskCreate(BarCodeRx_Task, "BarCodeUart_Rx_Task", 4096, NULL, 12, NULL);
+  xTaskCreatePinnedToCore(BarCodeRx_Task, "BarCodeUart_Rx_Task", 4096, NULL, 13, NULL,tskNO_AFFINITY);
   xTaskCreate(ConfigDataRx_Task, "ConfigUart_Rx_Task", 4096, NULL, 11, NULL);
 }

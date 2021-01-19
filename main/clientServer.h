@@ -10,7 +10,7 @@
 #include "inits.h"
 
 #define TAG "TEST"
-#define acquire_word "{\"MasterKey\":\"SMARTERDATA\"}"
+char AccessKey[50] = "{\"MasterKey\":\"SMARTERDATA\"}";
 
 cJSON *postdata;
 
@@ -18,8 +18,14 @@ int ret = 0;
 bool GottenId = false;
 char buffer[300], deviceID[70];
 //Server Address default
-char ACQUIRE_ID[150] = "http://192.168.43.240:80/fieldadmin/api/RegisterFieldDevice";
+char ACQUIREID_URL[150] = "http://192.168.43.200:80/fieldadmin/api/RegisterFieldDevice";
+char DATAPOST_URL[150] = "http://192.168.43.200:80/fieldadmin/api/dataupload";
 
+typedef enum
+{
+	UPLOAD_DATA,
+	GETDEVICE_ID
+}PostOps;
 //init postjson object 
 void createDataJsonObject()
 {
@@ -29,7 +35,7 @@ void createDataJsonObject()
 }
 
 //post contents
-void post_content(char *URL,char *data)
+void post_content(char *URL,char *data, PostOps ops)
 {
 	esp_http_client_config_t config = {
 		.url = URL,
@@ -45,24 +51,26 @@ void post_content(char *URL,char *data)
 	esp_http_client_set_post_field(client, data, strlen(data));
 	esp_err_t err = esp_http_client_perform(client);
 
-	if (err == ESP_OK)
-	{
+	if (err == ESP_OK){
 
 		int statusCode = esp_http_client_get_status_code(client);
 		ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d", statusCode, esp_http_client_get_content_length(client));
 
-		switch (statusCode)
-		{
+		switch (statusCode){
 
 		case 200:
 			ret = esp_http_client_read(client, (char *)buffer, 300);
 			buffer[ret] = '\0';
-			if (strstr(buffer, "deviceID"))
-				GottenId = true;
 			printf("%s\n", buffer);
-			cJSON *json = cJSON_Parse(buffer);
-			sprintf(deviceID, "%s", cJSON_GetObjectItem(json, "deviceID")->valuestring);
-			printf("%s\n", deviceID);
+			
+			if(ops == GETDEVICE_ID){
+				if (strstr(buffer, "deviceID")){
+					GottenId = true;
+					cJSON *json = cJSON_Parse(buffer);
+					sprintf(deviceID, "%s", cJSON_GetObjectItem(json, "deviceID")->valuestring);
+					printf("%s\n", deviceID);
+				}
+			}
 
 			// char *test = cJSON_Print(postdata);
 			// printf("%s\n", test);

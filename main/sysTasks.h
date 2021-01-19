@@ -47,7 +47,7 @@ void getDeviceId()
 	if(strlen(deviceID)<=1){
 
 		if(wifiConnectionStatus){
-			post_content(ACQUIRE_ID, acquire_word);
+			post_content(ACQUIREID_URL, AccessKey, GETDEVICE_ID);
 			sprintf(dataConfigs.DeviceID, "%s", deviceID);
 			printf("%s\n",dataConfigs.DeviceID);
 			SetConfigurations(&dataConfigs);
@@ -151,24 +151,30 @@ static void BarCodeRx_Task(void *args){
 
 	while (1){
 
-		if(!GottenId)
-		getDeviceId();
-
 		int rx = uart_read_bytes(UART_NUM_1, BarData, RX_BUF_SIZE * 2, 1000 / portTICK_RATE_MS);
+
 		if (rx > 0){
 
 			printf("%s\n",(char*)BarData);
-			// process(rx);
+			cJSON_GetObjectItem(postdata, "Data")->valuestring = (char*)BarData;
+			cJSON_GetObjectItem(postdata, "deviceID")->valuestring = deviceID;
+			char *CurrentData = cJSON_Print(postdata);
+			post_content(DATAPOST_URL, CurrentData,UPLOAD_DATA);
 			memset(BarData, 0, sizeof(BarData));
-		}
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+		}//
+			vTaskDelay(200 / portTICK_PERIOD_MS);
     }
-}
+}//
 
 //ConfigData RX Task
 static void ConfigDataRx_Task(void *args){
 
 	while (1){
+
+		if(!GottenId)
+		getDeviceId();
+
 		int rx = uart_read_bytes(UART_NUM_2, ConfigData, RX_BUF_SIZE * 2, 1000 / portTICK_RATE_MS);
 		if (rx > 0){
 
@@ -178,9 +184,10 @@ static void ConfigDataRx_Task(void *args){
 			GetNvsData(&config);
 			ops = process_ConfigData((char *)ConfigData,&config);
 			SetConfigurations(&config);
-			printf("%s\n", config.WifiPassword);
-			printf("%s\n", config.WifiSSID);
-			printf("%s\n", config.Url);
+			// printf("%s\n", config.WifiPassword);
+			// printf("%s\n", config.WifiSSID);
+			// printf("%s\n", config.Url_Upload);
+			// printf("%s\n", config.Url_Key);
 			memset(ConfigData, 0, sizeof(ConfigData));
 			if(ops == StopWifi)
 			{
@@ -188,7 +195,7 @@ static void ConfigDataRx_Task(void *args){
 				wifi_init_(&config);
 			}
 		}
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+			vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -250,10 +257,16 @@ void initialProcess(Configurations *const configs)
 		memcpy((void *)&CONFIG_WIFI_PASSSWORD, (void *)configs->WifiPassword, sizeof(configs->WifiPassword));
 	}
 
-	if (strlen(configs->Url) > 1)
+	if (strlen(configs->Url_Key) > 1)
 	{
-		memset(ACQUIRE_ID, 0, sizeof(ACQUIRE_ID));
-		memcpy((void *)&ACQUIRE_ID, (void *)configs->Url, sizeof(configs->Url));
+		memset(ACQUIREID_URL, 0, sizeof(ACQUIREID_URL));
+		memcpy((void *)&ACQUIREID_URL, (void *)configs->Url_Key, sizeof(configs->Url_Key));
+	}
+
+	if (strlen(configs->Url_Upload) > 1)
+	{
+		memset(DATAPOST_URL, 0, sizeof(DATAPOST_URL));
+		memcpy((void *)&DATAPOST_URL, (void *)configs->Url_Upload, sizeof(configs->Url_Upload));
 	}
 
 	if(strlen(configs->DeviceID)>1)
@@ -264,8 +277,10 @@ void initialProcess(Configurations *const configs)
 
 	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_PASSSWORD);
 	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_SSID);
-	ESP_LOGI(Log,"%s\n", ACQUIRE_ID);
+	ESP_LOGI(Log,"%s\n", ACQUIREID_URL);
+	ESP_LOGI(Log,"%s\n", DATAPOST_URL);
 	ESP_LOGI(Log,"%s\n", deviceID);
+	ESP_LOGI(Log,"%s\n", AccessKey);
 	
 }
 
