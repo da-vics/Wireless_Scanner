@@ -10,7 +10,7 @@
 #include "inits.h"
 
 #define TAG "TEST"
-char AccessKey[50] = "{\"MasterKey\":\"SMARTERDATA\"}";
+char AccessKey[50];
 
 cJSON *postdata;
 
