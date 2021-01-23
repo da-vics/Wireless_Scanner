@@ -78,13 +78,13 @@ void init_nvs(){
 	esp_err_t err_v2;
 	err_v2 = nvs_flash_init_partition("configs");
 
-	if (err_v2 == ESP_ERR_NVS_NO_FREE_PAGES || err_v2 == ESP_ERR_NVS_NEW_VERSION_FOUND)
-	{
+	if (err_v2 == ESP_ERR_NVS_NO_FREE_PAGES || err_v2 == ESP_ERR_NVS_NEW_VERSION_FOUND){
+
 		ESP_ERROR_CHECK(nvs_flash_erase_partition("configs"));
 		err_v2 = nvs_flash_init_partition("configs");
 	}
-	if (err_v2 == ESP_OK)
-	{
+	if (err_v2 == ESP_OK){
+
 		printf("initializing nvs");
 		nvs_started = true;
 	}
@@ -110,12 +110,12 @@ Operations process_ConfigData(char *data, Configurations *config){
 	if(data[0] == '<')
 		start = 0;
 	
-	else if(strstr(data,"URL_KEY:"))
-	{
+	else if(strstr(data,"URL_KEY:")){
+
 		data = strstr(data, ":");
 		int pos = 0;
-		for (int i = 2; i < strlen(data);++i)
-		{	
+		for (int i = 2; i < strlen(data);++i){
+
 			if(data[i] == '>')
 				break;
 			config->Url_Key[pos++] = data[i];
@@ -124,8 +124,8 @@ Operations process_ConfigData(char *data, Configurations *config){
 		return Normal;
 	}
 
-	else if(strstr(data,"URL_UPLOAD:"))
-	{
+	else if(strstr(data,"URL_UPLOAD:")){
+
 		data = strstr(data, ":");
 		int pos = 0;
 		for (int i = 2; i < strlen(data);++i)
@@ -138,8 +138,8 @@ Operations process_ConfigData(char *data, Configurations *config){
 		return Normal;
 	}
 
-	else if(strstr(data,"KEY:"))
-	{
+	else if(strstr(data,"KEY:")){
+
 		char key[50];
 		data = strstr(data, ":");
 		int pos = 0;
@@ -180,8 +180,9 @@ Operations process_ConfigData(char *data, Configurations *config){
 	dat = cJSON_CreateObject();
 	cJSON_AddStringToObject(dat, temp1, temp2);
 	sprintf(config->AcessKey,"%s",cJSON_Print(dat));
+	printf("%s\n",config->AcessKey);
 
-		return Normal;
+	return Normal;
 	}
 
 	if(start!=-1){
@@ -192,7 +193,6 @@ Operations process_ConfigData(char *data, Configurations *config){
 			}
 		}
 
-			//data:rtt>
 	if(start!=-1 && end!=-1){
 		int pos = 0;
 		for (int i = start + 1; i < strlen(data);++i){
@@ -217,7 +217,6 @@ Operations process_ConfigData(char *data, Configurations *config){
 	}//process
 
 	}
-
 	return Normal;
 }
 

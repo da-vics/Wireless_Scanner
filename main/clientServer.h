@@ -18,8 +18,8 @@ int ret = 0;
 bool GottenId = false;
 char buffer[300], deviceID[70];
 //Server Address default
-char ACQUIREID_URL[150] = "http://192.168.43.200:80/fieldadmin/api/RegisterFieldDevice";
-char DATAPOST_URL[150] = "http://192.168.43.200:80/fieldadmin/api/dataupload";
+char ACQUIREID_URL[150] = "http://192.168.43.179:80/fieldadmin/api/RegisterFieldDevice";
+char DATAPOST_URL[150] = "http://192.168.43.179:80/fieldadmin/api/dataupload";
 
 typedef enum
 {
@@ -71,9 +71,6 @@ void post_content(char *URL,char *data, PostOps ops)
 					printf("%s\n", deviceID);
 				}
 			}
-
-			// char *test = cJSON_Print(postdata);
-			// printf("%s\n", test);
 			break;
 
 		case 404:
@@ -85,11 +82,9 @@ void post_content(char *URL,char *data, PostOps ops)
 		}
 	        } 
 			
-			else {
+			else
 	            ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
-	        }
 	        esp_http_client_cleanup(client);
 }
-
 
 #endif //CLIENT_SERVER_H

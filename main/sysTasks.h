@@ -18,7 +18,7 @@ Configurations dataConfigs;
 
 // static SemaphoreHandle_t GetID;
 
-uint8_t BarData[200];
+uint8_t BarData[500];
 uint8_t ConfigData[200];
 
 //default values
@@ -146,6 +146,80 @@ void wifi_init_sta()
 	xEventGroupWaitBits(s_wifi_event_group, BIT_0, false, true, 5000 / portTICK_PERIOD_MS);
 }
 
+void initialProcess(Configurations *const);
+
+void processScannerData(){
+
+	char *tempDat = strstr((char*)BarData,"config:");
+
+	if(tempDat){
+
+		bool reconnect = false;
+		Configurations config;
+		tempDat = strstr(tempDat,"{");
+		printf("%s\n", tempDat);
+		cJSON *json = cJSON_Parse(tempDat);
+
+		sprintf(config.DeviceID, "%s", deviceID);
+		sprintf(config.Url_Upload, "%s", cJSON_GetObjectItem(json, "Url_Upload")->valuestring);
+		sprintf(config.Url_Key, "%s", cJSON_GetObjectItem(json, "Url_Key")->valuestring);
+		sprintf(config.WifiSSID, "%s", cJSON_GetObjectItem(json, "WifiSSID")->valuestring);
+		sprintf(config.WifiPassword, "%s", cJSON_GetObjectItem(json, "WifiPassword")->valuestring);
+		char *key = cJSON_GetObjectItem(json, "AccessKey")->valuestring;
+
+		if(!strcmp(config.WifiSSID,CONFIG_WIFI_SSID) || !strcmp(config.WifiPassword,CONFIG_WIFI_PASSSWORD))
+			reconnect = true;
+
+		char temp1[15] , temp2[35];
+
+		int pos = 0;
+		bool next = false;
+
+		for (int i = 0; i < strlen(key); ++i){ 
+
+			if(key[i] == ':'){
+				next = true;
+				pos = 0;
+				continue;
+			}
+
+			if(!next){
+				temp1[pos++] = key[i];
+				temp1[pos] = '\0';
+			}
+
+			if(next){
+				temp2[pos++] = key[i];
+				temp2[pos] = '\0';
+			}
+		}
+
+		cJSON *dat;
+		dat = cJSON_CreateObject();
+		cJSON_AddStringToObject(dat, temp1, temp2);
+		sprintf(config.AcessKey,"%s",cJSON_Print(dat));
+		printf("%s\n",config.AcessKey);
+
+		SetConfigurations(&config);
+		initialProcess(&config);
+
+		if(reconnect){
+			ESP_ERROR_CHECK(esp_wifi_stop());
+			wifi_init_(&config);
+		}
+
+		}//
+
+		else{
+		printf("%s\n",(char*)BarData);
+		cJSON_GetObjectItem(postdata, "Data")->valuestring = (char*)BarData;
+		cJSON_GetObjectItem(postdata, "deviceID")->valuestring = deviceID;
+		char *CurrentData = cJSON_Print(postdata);
+		post_content(DATAPOST_URL, CurrentData,UPLOAD_DATA);
+		}
+
+}
+
 //BarCode RX Task
 static void BarCodeRx_Task(void *args){
 
@@ -154,14 +228,8 @@ static void BarCodeRx_Task(void *args){
 		int rx = uart_read_bytes(UART_NUM_1, BarData, RX_BUF_SIZE * 2, 1000 / portTICK_RATE_MS);
 
 		if (rx > 0){
-
-			printf("%s\n",(char*)BarData);
-			cJSON_GetObjectItem(postdata, "Data")->valuestring = (char*)BarData;
-			cJSON_GetObjectItem(postdata, "deviceID")->valuestring = deviceID;
-			char *CurrentData = cJSON_Print(postdata);
-			post_content(DATAPOST_URL, CurrentData,UPLOAD_DATA);
+			processScannerData();
 			memset(BarData, 0, sizeof(BarData));
-
 		}//
 			vTaskDelay(200 / portTICK_PERIOD_MS);
     }
@@ -184,18 +252,15 @@ static void ConfigDataRx_Task(void *args){
 			GetNvsData(&config);
 			ops = process_ConfigData((char *)ConfigData,&config);
 			SetConfigurations(&config);
-			// printf("%s\n", config.WifiPassword);
-			// printf("%s\n", config.WifiSSID);
-			// printf("%s\n", config.Url_Upload);
-			// printf("%s\n", config.Url_Key);
+			initialProcess(&config);
 			memset(ConfigData, 0, sizeof(ConfigData));
-			if(ops == StopWifi)
-			{
+			if(ops == StopWifi){
+
 				ESP_ERROR_CHECK(esp_wifi_stop());
 				wifi_init_(&config);
 			}
 		}
-			vTaskDelay(5000 / portTICK_PERIOD_MS);
+			vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -243,8 +308,8 @@ void GetNvsData(Configurations *configs){
 	}
 }//
 
-void initialProcess(Configurations *const configs)
-{
+void initialProcess(Configurations *const configs){
+
 	if (strlen(configs->WifiSSID) > 1)
 	{
 		memset(CONFIG_WIFI_SSID, 0, sizeof(CONFIG_WIFI_SSID));
@@ -275,13 +340,18 @@ void initialProcess(Configurations *const configs)
 		memcpy((void *)&deviceID, (void *)configs->DeviceID, sizeof(configs->DeviceID));
 	}
 
+	if(strlen(configs->DeviceID)>1)
+	{
+		memset(AccessKey, 0, sizeof(AccessKey));
+		memcpy((void *)&AccessKey, (void *)configs->AcessKey, sizeof(configs->AcessKey));
+	}
+
 	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_PASSSWORD);
 	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_SSID);
 	ESP_LOGI(Log,"%s\n", ACQUIREID_URL);
 	ESP_LOGI(Log,"%s\n", DATAPOST_URL);
 	ESP_LOGI(Log,"%s\n", deviceID);
 	ESP_LOGI(Log,"%s\n", AccessKey);
-	
 }
 
 #endif //SYS_TASK_H
