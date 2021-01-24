@@ -165,6 +165,7 @@ void processScannerData(){
 		sprintf(config.Url_Key, "%s", cJSON_GetObjectItem(json, "Url_Key")->valuestring);
 		sprintf(config.WifiSSID, "%s", cJSON_GetObjectItem(json, "WifiSSID")->valuestring);
 		sprintf(config.WifiPassword, "%s", cJSON_GetObjectItem(json, "WifiPassword")->valuestring);
+		sprintf(config.Location, "%s", cJSON_GetObjectItem(json, "Location")->valuestring);
 		char *key = cJSON_GetObjectItem(json, "AccessKey")->valuestring;
 
 		if(!strcmp(config.WifiSSID,CONFIG_WIFI_SSID) || !strcmp(config.WifiPassword,CONFIG_WIFI_PASSSWORD))
@@ -201,7 +202,7 @@ void processScannerData(){
 		printf("%s\n",config.AcessKey);
 
 		SetConfigurations(&config);
-		initialProcess(&config);
+		initialProcess(&config);	
 
 		if(reconnect){
 			ESP_ERROR_CHECK(esp_wifi_stop());
@@ -211,11 +212,14 @@ void processScannerData(){
 		}//
 
 		else{
-		printf("%s\n",(char*)BarData);
-		cJSON_GetObjectItem(postdata, "Data")->valuestring = (char*)BarData;
-		cJSON_GetObjectItem(postdata, "deviceID")->valuestring = deviceID;
-		char *CurrentData = cJSON_Print(postdata);
-		post_content(DATAPOST_URL, CurrentData,UPLOAD_DATA);
+			char temp[700];
+			printf("%s\n", (char *)BarData);
+			sprintf(temp, "%s%s%s", (char *)BarData, ":", Location);
+			printf("%s\n", temp);
+			cJSON_GetObjectItem(postdata, "Data")->valuestring = temp;
+			cJSON_GetObjectItem(postdata, "deviceID")->valuestring = deviceID;
+			char *CurrentData = cJSON_Print(postdata);
+			post_content(DATAPOST_URL, CurrentData, UPLOAD_DATA);
 		}
 
 }
@@ -228,6 +232,7 @@ static void BarCodeRx_Task(void *args){
 		int rx = uart_read_bytes(UART_NUM_1, BarData, RX_BUF_SIZE * 2, 1000 / portTICK_RATE_MS);
 
 		if (rx > 0){
+			printf("%s\n", BarData);
 			processScannerData();
 			memset(BarData, 0, sizeof(BarData));
 		}//
@@ -346,12 +351,19 @@ void initialProcess(Configurations *const configs){
 		memcpy((void *)&AccessKey, (void *)configs->AcessKey, sizeof(configs->AcessKey));
 	}
 
+	if(strlen(configs->Location)>1)
+	{
+		memset(Location, 0, sizeof(Location));
+		memcpy((void *)&Location, (void *)configs->Location, sizeof(configs->Location));
+	}
+
 	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_PASSSWORD);
 	ESP_LOGI(Log,"%s\n", CONFIG_WIFI_SSID);
 	ESP_LOGI(Log,"%s\n", ACQUIREID_URL);
 	ESP_LOGI(Log,"%s\n", DATAPOST_URL);
 	ESP_LOGI(Log,"%s\n", deviceID);
 	ESP_LOGI(Log,"%s\n", AccessKey);
+	ESP_LOGI(Log,"%s\n", Location);
 }
 
 #endif //SYS_TASK_H

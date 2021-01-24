@@ -11,6 +11,7 @@
 
 #define TAG "TEST"
 char AccessKey[50];
+char Location[70];
 
 cJSON *postdata;
 

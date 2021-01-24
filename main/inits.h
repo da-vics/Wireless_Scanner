@@ -23,6 +23,7 @@ typedef struct
 	char WifiPassword[60];
 	char DeviceID[70];
 	char AcessKey[50];
+	char Location[70];
 } Configurations;
 
 static const int RX_BUF_SIZE = 1024;
